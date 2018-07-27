@@ -1,27 +1,31 @@
 extern crate ggez;
 use ggez::*;
-use ggez::graphics::{Color, DrawMode, Point2};
+use ggez::graphics::{Color, DrawMode, Rect};
+
+#[derive(Copy, Clone, PartialEq)]
+enum Tile {
+    Blank,
+    Player,
+    Enemy,
+    Wall,
+}
+
+const WINDOW_W: u32 = 800;
+const WINDOW_H: u32 = 600;
+const BOARD_SIZE: usize = 40;
+const BOARD_OFFSET_X: i32 = (WINDOW_W as i32)/2 - 8*(BOARD_SIZE as i32)/2;
+const BOARD_OFFSET_Y: i32 = (WINDOW_H as i32)/2 - 8*(BOARD_SIZE as i32)/2;
+type Board = [[Tile; BOARD_SIZE]; BOARD_SIZE];
 
 struct MainState {
-    p: f32,
-    r: f32,
-    b: f32,
-    x: f32,
-    y: f32,
-    z: f32,
-    t: f32,
+    board: Board,
 }
 
 impl MainState {
     fn new(_ctx: &mut Context) -> GameResult<MainState> {
+        let b = [[Tile::Blank; BOARD_SIZE]; BOARD_SIZE];
         let s = MainState {
-            p: 10.0,
-            r: 28.0,
-            b: 8.0/3.0,
-            x: 0.10,
-            y: 0.00,
-            z: 0.00,
-            t: 0.00,
+            board: b,
         };
         Ok(s)
     }
@@ -29,25 +33,76 @@ impl MainState {
 
 impl event::EventHandler for MainState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
-        let dt = 0.01;
-        let x = self.x + (-self.p * self.x + self.p * self.y)*dt;
-        let y = self.y + (-self.x * self.z + self.r * self.x - self.y)*dt;
-        let z = self.z + (self.x * self.y - self.b * self.z)*dt;
-        self.x = x;
-        self.y = y;
-        self.z = z;
-        self.t += 0.1;
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx);
-        graphics::set_color(ctx, Color::new(self.t.asin(), self.t.sin(), self.t.cos(), 1.0))?;
-        graphics::circle(ctx,
-                         DrawMode::Fill,
-                         Point2::new(400.+self.x, 300.+self.y),
-                         8.,
-                         1.)?;
+        // Draw Blank
+        graphics::set_color(ctx, Color::new(0.1, 0.1, 0.1, 1.0))?;
+        for y in 0..BOARD_SIZE {
+            for x in 0..BOARD_SIZE {
+                if self.board[y][x] == Tile::Blank {
+                    let pos_x = x as i32 * 8;
+                    let pos_y = y as i32 * 8;
+                    graphics::rectangle(ctx,
+                                        DrawMode::Fill,
+                                        Rect::new_i32(BOARD_OFFSET_X+pos_x,
+                                                      BOARD_OFFSET_Y+pos_y,
+                                                      8,
+                                                      8))?;
+                }
+            }
+        }
+        // Draw Player
+        graphics::set_color(ctx, Color::new(0.1, 0.8, 0.2, 1.0))?;
+        for y in 0..BOARD_SIZE {
+            for x in 0..BOARD_SIZE {
+                if self.board[y][x] == Tile::Player {
+                    let pos_x = x as i32 * 8;
+                    let pos_y = y as i32 * 8;
+                    graphics::rectangle(ctx,
+                                        DrawMode::Fill,
+                                        Rect::new_i32(BOARD_OFFSET_X+pos_x,
+                                                      BOARD_OFFSET_Y+pos_y,
+                                                      8,
+                                                      8))?;
+                }
+            }
+        }
+        // Draw Enemy
+        graphics::set_color(ctx, Color::new(0.8, 0.2, 0.1, 1.0))?;
+        for y in 0..BOARD_SIZE {
+            for x in 0..BOARD_SIZE {
+                if self.board[y][x] == Tile::Enemy {
+                    let pos_x = x as i32 * 8;
+                    let pos_y = y as i32 * 8;
+                    graphics::rectangle(ctx,
+                                        DrawMode::Fill,
+                                        Rect::new_i32(BOARD_OFFSET_X+pos_x,
+                                                      BOARD_OFFSET_Y+pos_y,
+                                                      8,
+                                                      8))?;
+                }
+            }
+        }
+        // Draw Wall
+        graphics::set_color(ctx, Color::new(1.0, 1.0, 1.0, 1.0))?;
+        for y in 0..BOARD_SIZE {
+            for x in 0..BOARD_SIZE {
+                if self.board[y][x] == Tile::Wall {
+                    let pos_x = x as i32 * 8;
+                    let pos_y = y as i32 * 8;
+                    graphics::rectangle(ctx,
+                                        DrawMode::Fill,
+                                        Rect::new_i32(BOARD_OFFSET_X+pos_x,
+                                                      BOARD_OFFSET_Y+pos_y,
+                                                      8,
+                                                      8))?;
+                }
+            }
+        }
+
         graphics::present(ctx);
         Ok(())
     }
@@ -57,5 +112,16 @@ fn main() {
     let c = conf::Conf::new();
     let ctx = &mut Context::load_from_conf("lifeduel", "eddie", c).unwrap();
     let state = &mut MainState::new(ctx).unwrap();
+    graphics::set_mode(ctx, conf::WindowMode {
+        width: WINDOW_W,
+        height: WINDOW_H,
+        borderless: false,
+        fullscreen_type: conf::FullscreenType::Off,
+        vsync: false,
+        min_width: 0,
+        max_width: 0,
+        min_height: 0,
+        max_height: 0,
+    }).unwrap();
     event::run(ctx, state).unwrap();
 }
