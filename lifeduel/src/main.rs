@@ -1,4 +1,5 @@
 extern crate ggez;
+use std::cmp;
 use ggez::*;
 use ggez::graphics::{Color, DrawMode, Rect};
 
@@ -23,7 +24,10 @@ struct MainState {
 
 impl MainState {
     fn new(_ctx: &mut Context) -> GameResult<MainState> {
-        let b = [[Tile::Blank; BOARD_SIZE]; BOARD_SIZE];
+        let mut b = [[Tile::Blank; BOARD_SIZE]; BOARD_SIZE];
+        b[3][3] = Tile::Player;
+        b[3][4] = Tile::Player;
+        b[3][5] = Tile::Player;
         let s = MainState {
             board: b,
         };
@@ -31,8 +35,65 @@ impl MainState {
     }
 }
 
+fn count_neighbor(board: &Board, x: usize, y: usize) -> (usize, usize) {
+    let left = cmp::max(1, x) - 1;
+    let right = cmp::min(x, BOARD_SIZE-2) + 1;
+    let top = cmp::max(1, y) - 1;
+    let bottom = cmp::min(y, BOARD_SIZE-2) + 1;
+    let mut player_count = 0;
+    let mut enemy_count = 0;
+    for j in top..bottom+1 {
+        for k in left..right+1 {
+            if !(j==y && k==x) {
+                match board[j][k] {
+                    Tile::Player => player_count += 1,
+                    Tile::Enemy => enemy_count += 1,
+                    _ => {}
+                }
+            }
+        }
+    }
+    (player_count, enemy_count)
+}
+
 impl event::EventHandler for MainState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
+        let mut new_board = self.board.clone();
+        for y in 0..BOARD_SIZE {
+            for x in 0..BOARD_SIZE {
+                let (player_count, enemy_count) = count_neighbor(&self.board, x, y);
+                let diff = player_count as i32 - enemy_count as i32;
+                match self.board[y][x] {
+                    Tile::Blank => {
+                        if diff == 3 {
+                            new_board[y][x] = Tile::Player;
+                        } else if diff == -3 {
+                            new_board[y][x] = Tile::Enemy;
+                        }
+                    },
+                    Tile::Player => {
+                        if diff == 2 || diff == 3 {
+                            new_board[y][x] = Tile::Player;
+                        } else if diff == -2 || diff == -3 {
+                            new_board[y][x] = Tile::Enemy;
+                        } else {
+                            new_board[y][x] = Tile::Blank;
+                        }
+                    },
+                    Tile::Enemy => {
+                        if diff == 2 || diff == 3 {
+                            new_board[y][x] = Tile::Player;
+                        } else if diff == -2 || diff == -3 {
+                            new_board[y][x] = Tile::Enemy;
+                        } else {
+                            new_board[y][x] = Tile::Blank;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        self.board = new_board;
         Ok(())
     }
 
